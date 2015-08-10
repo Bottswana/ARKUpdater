@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace ARKUpdater.Classes
 {
+	#region Source Server Query
 	class SrcQuery : IDisposable
 	{
 		IPAddress IPAddr;
@@ -257,6 +258,207 @@ namespace ARKUpdater.Classes
 		}
 		#endregion Read Methods
 	}
+	#endregion Source Server Query
+
+	#region ARK Customized RCON
+	class ArkRCON : IDisposable
+	{
+		string IPAddr;
+		int Port, Timeout;
+		bool Authenticated;
+
+		TcpClient ServerClient;
+		NetworkStream ServerStream;
+
+		public ArkRCON(string ip, int port, int timeout = 2000)
+		{
+			this.IPAddr = ip;
+			this.Port = port;
+			
+			this.Timeout = timeout;
+			this.Authenticated = false;
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if( disposing )
+			{
+				if( this.ServerClient != null && this.ServerClient.Connected ) this._DisconnectSocket();
+				if( this.ServerStream != null ) this.ServerStream.Dispose();
+			}
+		}
+
+		public void Authenticate(string Password)
+		{
+			this._ConnectSocket();
+
+			// Copy Request ID into Byte array
+			byte[] Request = Encoding.ASCII.GetBytes(Password);
+			byte[] Transmit = new byte[ 14 + Request.Length ];
+
+			uint length = 10 + (uint)Request.Length;
+			int pos = 0;
+
+			UInt32[] PackValues = {length, 1, 3};
+			foreach( var Value in PackValues )
+			{
+				byte[] output = BitConverter.GetBytes(Value);
+				Buffer.BlockCopy(output, 0, Transmit, pos, output.Length);
+				pos = pos + output.Length;
+			}
+
+			byte[] NullBytes = {00, 00};
+
+			// Copy password into Byte array
+			Buffer.BlockCopy(Request, 0, Transmit, pos, Request.Length);
+			Buffer.BlockCopy(NullBytes, 0, Transmit, pos+Request.Length, 2);
+
+			this._WriteSocket(Transmit);
+
+			// Await Response
+			byte[] ResponseData = new byte[4096];
+			int Position = 3;
+
+			try
+			{
+				this.ServerStream.Read(ResponseData, 0, 4096);
+				var PasswordResponse = this._GetLong(ResponseData, ref Position);
+				if( PasswordResponse == -1 )
+				{
+					this._DisconnectSocket();
+					throw new QueryException("Incorrect RCON Password");
+				}
+			}
+			catch( System.IO.IOException )
+			{
+				throw new QueryException("RCON Failed: Socket Read Error");
+			}
+
+			this.Authenticated = true;
+		}
+
+		public string ExecuteCommand(string Command)
+		{
+			string ReturnData = null;
+			if( !Authenticated )
+			{
+				throw new QueryException("Not authenticated with Server");
+			}
+
+			try
+			{
+				// Copy Request ID into Byte array
+				byte[] Request = Encoding.ASCII.GetBytes(Command);
+				byte[] Transmit = new byte[ 14 + Request.Length ];
+
+				uint length = 10 + (uint)Request.Length;
+				int pos = 0;
+
+				UInt32[] PackValues = {length, 1, 2};
+				foreach( var Value in PackValues )
+				{
+					byte[] output = BitConverter.GetBytes(Value);
+					Buffer.BlockCopy(output, 0, Transmit, pos, output.Length);
+					pos = pos + output.Length;
+				}
+
+				byte[] NullBytes = {00, 00};
+
+				// Copy request into Byte array
+				Buffer.BlockCopy(Request, 0, Transmit, pos, Request.Length);
+				Buffer.BlockCopy(NullBytes, 0, Transmit, pos+Request.Length, 2);
+
+				this._WriteSocket(Transmit);
+
+				// Await Response
+				byte[] ResponseData = new byte[4096];
+				this.ServerStream.Read(ResponseData, 0, 4096);
+
+				// Read Response
+				int Position = 11;
+				ReturnData = this._GetString(ResponseData, ref Position);
+			}
+			catch( Exception )
+			{
+				return null;
+			}
+
+			return ReturnData;
+		}
+
+		#region Connection Methods
+		private void _ConnectSocket()
+		{
+			if( this.ServerClient != null && this.ServerClient.Connected ) return;
+
+			try
+			{
+				this.ServerClient = new TcpClient(IPAddr, Port);
+				this.ServerStream = ServerClient.GetStream();
+
+				this.ServerClient.ReceiveTimeout = this.Timeout;
+				this.ServerClient.SendTimeout = this.Timeout;
+			}
+			catch( SocketException E )
+			{
+				throw new QueryException(string.Format("Unable to open RCON: {0}", E.Message));
+			}
+		}
+
+		private void _DisconnectSocket()
+		{
+			this.ServerClient.Close();
+		}
+		#endregion Connection Methods
+
+		#region Write Methods
+		private void _WriteSocket(byte[] data)
+		{
+			try
+			{
+				int DataLength = data.Length;
+				ServerStream.Write(data, 0, DataLength);
+			}
+			catch( Exception ) {}
+		}
+		#endregion Write Methods
+
+		#region Read Methods
+		private string _GetString(byte[] data, ref int pos)
+		{
+			int currLen = 0;
+			byte[] byteString = new byte[4096];
+
+			for( int i=pos+1; i<=data.Length; i++ )
+			{
+				if( data[i] == 0 )
+				{
+					pos = i;
+					break;
+				}
+
+				byteString[currLen] = data[i];
+				currLen++;
+			}
+
+			var UTF8String = Encoding.UTF8.GetString(byteString);
+			return Regex.Replace(UTF8String.Trim(), @"\0|\n ", "").Trim();
+		}
+
+		private long _GetLong(byte[] data, ref int pos)
+		{
+			pos = pos+4;
+			return BitConverter.ToInt32(data, pos-3);
+		}
+		#endregion Read Methods
+	}
+	#endregion ARK Customized RCON
 
 	class QueryException : Exception
 	{
