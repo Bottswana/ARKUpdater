@@ -1,0 +1,5 @@
+C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\bin\Release\Components.ConsolePlus.dll
+C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\bin\Release\Components.ConsolePlus.pdb
+C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\obj\Release\Components.ConsolePlus.csprojResolveAssemblyReference.cache
+C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\obj\Release\Components.ConsolePlus.dll
+C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\obj\Release\Components.ConsolePlus.pdb

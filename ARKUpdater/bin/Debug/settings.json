@@ -1,0 +1,42 @@
+{
+    "PostponeUpdateWhenPlayersHigherThan": 10,
+    "UpdateWarningTimeInMinutes": 10,
+    "UpdatePollingInMinutes": 5,
+    "LogLevel": "Debug",
+    "SteamCMDPath": "C:\\Users\\James\\Desktop\\ARKTest\\SteamPipe",
+
+    "Backup": {
+        "EnableBackup": "true",
+        "UseCompression": "true",
+        "BackupIntervalInMinutes": 30,
+        "NumberOfBackupsToKeepPerServer": 10
+    },
+
+    "Messages": {
+        "ServerUpdateBroadcast": "This server will shut down in {0} minute(s) for an update",
+        "ServerBackupBroadcast": "This server is performing a backup, this may take a few minutes",
+        "ServerShutdownBroadcast": "This server will now shut down for an update"
+    },
+
+    "Servers": [
+        {
+            "SteamUpdateScript": "C:\\Users\\James\\Desktop\\ARKTest\\Server\\ServerUpdater.cfg",
+            "GameServerPath": "C:\\Users\\James\\Desktop\\ARKTest\\Server",
+
+            "GameServerName": "BottsTestingServer",
+            "GameServerMap": "TheIsland",
+            "MaxPlayers": 80,
+            "QueryPort": 27015,
+            "RCONPort": 27016,
+            "Port": 7777,
+
+            "ServerPassword": "Password123",
+            "ServerAdminPassword": "Password123",
+            "ServerPVE": "false",
+
+            "ServerParameters": { 
+                "NoTributeDownloads": "true"
+            }
+        }
+    ]
+}

@@ -1,0 +1,61 @@
+{
+    "PostponeUpdateWhenPlayersHigherThan": 10,
+    "UpdateWarningTimeInMinutes": 10,
+    "UpdatePollingInMinutes": 5,
+    "LogFile": "console.log",
+    "LogLevel": "Debug",
+    "SteamCMDPath": "",
+
+    "Backup": {
+        "EnableBackup": "true",
+        "UseCompression": "true",
+        "BackupIntevalInMinutes": 30
+    },
+
+    "Messages": {
+        "ServerUpdateBroadcast": "This server will shut down in {0} minute(s) for an update",
+        "ServerBackupBroadcast": "This server is performing a backup, this may take a few minutes",
+        "ServerShutdownBroadcast": "This server will now shut down for an update"
+    },
+
+    "Servers": [
+        {
+            "SteamUpdateScript": "",
+            "GameServerPath": "",
+
+            "GameServerName": "Server1",
+            "GameServerMap": "TheIsland",
+            "MaxPlayers": 80,
+            "QueryPort": 27015,
+            "RCONPort": 27016,
+            "Port": 7777,
+
+            "ServerPassword": "",
+            "ServerAdminPassword": "",
+            "ServerPVE": "false",
+
+            "ServerParameters": { 
+                "NoTributeDownloads": "true"
+            }
+        },
+        {
+            "SteamUpdateScript": "",
+            "GameServerPath": "",
+
+            "GameServerName": "Server2",
+            "GameServerMap": "TheIsland",
+            "MaxPlayers": 80,
+            "QueryPort": 27025,
+            "RCONPort": 27026,
+            "Port": 7787,
+
+            "ServerPassword": "",
+            "ServerAdminPassword": "",
+            "ServerPVE": "false",
+
+            "ServerParameters": { 
+                "NoTributeDownloads": "true"
+            }
+        }
+    ]
+}
