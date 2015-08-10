@@ -17,7 +17,7 @@ namespace ARKUpdater
 
 			// Because a little fun is compulsory
 			string[] ConsoleTitles = {"Queen of Dragons. Oh, wait. Dinos", "Jack of all servers, Master of none.", "Server Happiness Assurance."};
-			Console.Title = string.Format("ARKUpdater: {0}", ConsoleTitles[ (new Random()).Next(0, ConsoleTitles.Length-1) ]);
+			Console.Title = string.Format("ARKUpdater: {0}", ConsoleTitles[ (new Random()).Next(0, ConsoleTitles.Length) ]);
 
 			Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) {
 				e.Cancel = true; System.Shutdown();
@@ -102,7 +102,7 @@ namespace ARKUpdater
 		public ServerClass(SettingsLoader.ServerChild Data)
 		{
 			this.ProcessID = 0;
-			this.MinutesRemaining = 0;
+			this.MinutesRemaining = -1;
 
 			this.LastUpdated = 0;
 			this.LastBackedUp = 0;
@@ -116,11 +116,11 @@ namespace ARKUpdater
 	{
 		public SettingsLoader ARKConfiguration;
 		public ServerInterface Server;
+		public ServerClass[] Servers;
 		public SteamInterface Steam;
 		public ConsoleLogger Log;
 
 		private ManualResetEvent _Sleeper;
-		private ServerClass[] _Servers;
 		private bool _Running;
 
 		public ARKUpdater()
@@ -130,7 +130,7 @@ namespace ARKUpdater
 
 			// Initialise Console Logging
 			this.Log = new ConsoleLogger(LogLevel.Debug);
-			Log.ConsolePrint(LogLevel.Info, "ARKUpdater Starting (Version: {0})", Helpers.GetApplicationVersion());
+			this.Log.ConsolePrint(LogLevel.Info, "ARKUpdater Starting (Version: {0})", Helpers.GetApplicationVersion());
 			
 			// Load configuration from settings.json
 			this.ARKConfiguration = SettingsLoader.LoadConfiguration("settings.json", Log);
@@ -149,7 +149,7 @@ namespace ARKUpdater
 				}
 				catch( ArgumentException )
 				{
-					Log.ConsolePrint(LogLevel.Error, "Invalid LogLevel in settings.json, using default (DEBUG)");
+					this.Log.ConsolePrint(LogLevel.Error, "Invalid LogLevel in settings.json, using default (DEBUG)");
 				}
 			}
 
@@ -158,10 +158,10 @@ namespace ARKUpdater
 			foreach( var ServerData in this.ARKConfiguration.Servers )
 			{
 				TempList.Add( new ServerClass(ServerData) );
-				Log.ConsolePrint(LogLevel.Debug, "Loaded server '{0}' from configuration", ServerData.GameServerName);
+				this.Log.ConsolePrint(LogLevel.Debug, "Loaded server '{0}' from configuration", ServerData.GameServerName);
 			}
 
-			this._Servers = TempList.ToArray();
+			this.Servers = TempList.ToArray();
 
 			// Initialise Interfaces
 			if( Helpers.IsUnixPlatform() )
@@ -172,13 +172,13 @@ namespace ARKUpdater
 			else
 			{
 				this.Steam = new SteamInterfaceWindows();
-				this.Server = new ServerInterfaceWindows();
+				this.Server = new ServerInterfaceWindows(this);
 			}
 
 			// Verify path to SteamCMD
 			if( !this.Steam.VerifySteamPath(this.ARKConfiguration.SteamCMDPath) )
 			{
-				Log.ConsolePrint(LogLevel.Error, "Unable to find SteamCMD in provided path, please check the SteamCMD path in settings.json");
+				this.Log.ConsolePrint(LogLevel.Error, "Unable to find SteamCMD in provided path, please check the SteamCMD path in settings.json");
 				Helpers.ExitWithError();
 			}
 		}
@@ -187,7 +187,7 @@ namespace ARKUpdater
 		{
 			// Get game information
 			Log.ConsolePrint(LogLevel.Info, "Fetching public build number for `ARK: Survival Evolved` via SteamCMD");
-			int BuildNumber = this.Steam.GetGameInformation(376030);
+			int BuildNumber = Steam.GetGameInformation(376030);
 			if( BuildNumber == -1 )
 			{
 				Log.ConsolePrint(LogLevel.Error, "Unable to fetch Build ID from Steam, this may be an issue with your SteamCMD configuration.");
@@ -198,58 +198,129 @@ namespace ARKUpdater
 			}
 
 			// Initial Setup
-			foreach( var Server in this._Servers )
+			foreach( var Server in Servers )
 			{
 				Log.ConsolePrint(LogLevel.Debug, "Init Server '{0}'", Server.ServerData.GameServerName);
-				int CurrentAppID = this.Steam.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
+				int CurrentAppID = Steam.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
 
 				if( (CurrentAppID < BuildNumber) && (CurrentAppID != -1) )
 				{
 					// Update Available
 					Log.ConsolePrint(LogLevel.Info, "Server '{0}' has an update available, Updating before we start the server up.", Server.ServerData.GameServerName);
-					this.Steam.UpdateGame(Server.ServerData.SteamUpdateScript);
+					Steam.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
 				}
 				else
 				{
 					// Start Server
 					Log.ConsolePrint(LogLevel.Info, "Server '{0}' is up to date, Starting server.", Server.ServerData.GameServerName);
-					var ProcessID = this.Server.StartServer(Server.ServerData, Log);
+					var ProcessID = this.Server.StartServer(Server.ServerData);
 					Server.ProcessID = ProcessID;
 				}
 			}
 
 			// Application Loop
 			int LastUpdatePollTime = Helpers.CurrentUnixStamp;
+			int LastMinutePollTime = Helpers.CurrentUnixStamp;
+
 			int PreviousBuild = BuildNumber;
 			bool UpdatesQueued = false;
-
-			while( this._Running )
+			while( _Running )
 			{
-				if( (LastUpdatePollTime + (60 * this.ARKConfiguration.UpdatePollingInMinutes) < Helpers.CurrentUnixStamp) && !UpdatesQueued )
+				if( (LastUpdatePollTime + (60 * ARKConfiguration.UpdatePollingInMinutes) < Helpers.CurrentUnixStamp) && !UpdatesQueued )
 				{
 					// Query Steam and check for updates to our servers
 					Log.ConsolePrint(LogLevel.Debug, "Checking with Steam for updates to ARK (Current Build: {0})", BuildNumber);
 					BuildNumber = this.Steam.GetGameInformation(376030);
+
 					LastUpdatePollTime = Helpers.CurrentUnixStamp;
-					Log.ConsolePrint(LogLevel.Debug, "New build number: {0}", BuildNumber);
+					if( BuildNumber > PreviousBuild ) Log.ConsolePrint(LogLevel.Info, "A new build of `ARK: Survival Evolved` is available. Build number: {0}", BuildNumber);
 				}
 
-				if( PreviousBuild != BuildNumber )
+				bool MinutePassed = (LastMinutePollTime+60 <= Helpers.CurrentUnixStamp) ? true : false;
+				foreach( var Server in Servers )
 				{
-					foreach( var Server in this._Servers )
+					if( (PreviousBuild != BuildNumber) && (Server.MinutesRemaining == -1) )
 					{
 						// Check each server for updates
-						if( Server.MinutesRemaining != 0 ) continue;
-
-						var ServerBuild = this.Steam.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
+						var ServerBuild = Steam.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
 						if( (ServerBuild < BuildNumber) && (ServerBuild != -1) )
 						{
-							Server.MinutesRemaining = this.ARKConfiguration.UpdateWarningTimeInMinutes;
+							// Check for Player Requirement
+							if( ARKConfiguration.PostponeUpdateWhenPlayersHigherThan > 0 )
+							{
+								using( var Query = new SrcQuery("127.0.0.1", Server.ServerData.QueryPort) )
+								{
+									var QueryData = Query.QueryServer();
+									if( Convert.ToInt32(QueryData["CurrentPlayers"]) > ARKConfiguration.PostponeUpdateWhenPlayersHigherThan )
+									{
+										Log.ConsolePrint(LogLevel.Info, "Available update for server '{0}' postponed. Players online: {1}", Server.ServerData.GameServerName, QueryData["CurrentPlayers"]);
+										continue;
+									}
+								}
+							}
 
-							string RCONWarning = string.Format(this.ARKConfiguration.Messages.ServerUpdateBroadcast, Server.MinutesRemaining);
-							Log.ConsolePrint(LogLevel.Debug, "RCON: {0}", RCONWarning);
-							//TODO: Send RCON Warning
+							// Schedule update on server with the user defined interval.
+							Log.ConsolePrint(LogLevel.Success, "Server '{0}' queued for update successfully. Update will begin in {1} minute(s)", Server.ServerData.GameServerName, ARKConfiguration.UpdateWarningTimeInMinutes);
+							Server.MinutesRemaining = ARKConfiguration.UpdateWarningTimeInMinutes;
+							if( !UpdatesQueued ) UpdatesQueued = true;
+
+							// Send warning message to Server
+							using( var RCONClient = new ArkRCON("127.0.0.1", Server.ServerData.RCONPort) )
+							{
+								RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
+
+								string RCONWarning = string.Format(ARKConfiguration.Messages.ServerUpdateBroadcast, Server.MinutesRemaining);
+								RCONClient.ExecuteCommand(string.Format("serverchat {0}", RCONWarning));
+							}
 						}
+					}
+
+					if( MinutePassed && (Server.MinutesRemaining >= 1) )
+					{
+						Log.ConsolePrint(LogLevel.Debug, "Ticking update minute counter from {0} to {1} for server '{2}'", Server.MinutesRemaining, Server.MinutesRemaining-1, Server.ServerData.GameServerName);
+						Server.MinutesRemaining = (Server.MinutesRemaining - 1);
+
+						// Send warning message to Server
+						if( Server.MinutesRemaining != 0 )
+						{
+							using( var RCONClient = new ArkRCON("127.0.0.1", Server.ServerData.RCONPort) )
+							{
+								RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
+
+								string RCONWarning = string.Format(ARKConfiguration.Messages.ServerUpdateBroadcast, Server.MinutesRemaining);
+								RCONClient.ExecuteCommand(string.Format("serverchat {0}", RCONWarning));
+							}
+						}
+					}
+
+					if( Server.MinutesRemaining == 0 )
+					{
+						// Send warning message to Server
+						using( var RCONClient = new ArkRCON("127.0.0.1", Server.ServerData.RCONPort) )
+						{
+							RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
+							RCONClient.ExecuteCommand(string.Format("serverchat {0}", ARKConfiguration.Messages.ServerShutdownBroadcast));
+						}
+
+						_Sleeper.WaitOne( TimeSpan.FromSeconds(2) );
+
+						// Shutdown Server
+						Log.ConsolePrint(LogLevel.Info, "Server '{0}' will now be shutdown for an update", Server.ServerData.GameServerName);
+						this.Server.StopServer(Server.ServerData);
+
+						Log.ConsolePrint(LogLevel.Debug, "Server '{0}' now waiting for process exit", Server.ServerData.GameServerName);
+						while( Server.ProcessID != 0 ) continue; // This is set to 0 by our Exit event on the process in ServerInterface.cs
+
+						// Update Server
+						Steam.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
+						_Sleeper.WaitOne( TimeSpan.FromSeconds(2) );
+
+						// Restart Server
+						Log.ConsolePrint(LogLevel.Info, "Server '{0}' update complete, restarting server.", Server.ServerData.GameServerName);
+						var ProcessID = this.Server.StartServer(Server.ServerData);
+
+						Server.MinutesRemaining = -1;
+						Server.ProcessID = ProcessID;
 					}
 				}
 
@@ -258,9 +329,14 @@ namespace ARKUpdater
 					// Check for Last Backup
 				}
 
-				// ZzzzzZZZzzzZZZ
 				PreviousBuild = BuildNumber;
-				this._Sleeper.WaitOne( TimeSpan.FromSeconds(10) );
+				if( MinutePassed ) LastMinutePollTime = Helpers.CurrentUnixStamp;
+
+				int NumberServersUpdateRemaining = Servers.Where(x => x.MinutesRemaining != -1).Count();
+				if( NumberServersUpdateRemaining <= 0 && UpdatesQueued ) UpdatesQueued = false;
+
+				// ZzzzzZZZzzzZZZ
+				_Sleeper.WaitOne( TimeSpan.FromSeconds(5) );
 			}
 		}
 
@@ -268,10 +344,10 @@ namespace ARKUpdater
 		{
 			// Shutdown Main Thread
 			Log.ConsolePrint(LogLevel.Info, "Shutting down");
-			this._Running = false;
+			_Running = false;
 
-			this._Sleeper.Set();
+			_Sleeper.Set();
 			Thread.Sleep(500);
-		}
+		} 
 	}
 }

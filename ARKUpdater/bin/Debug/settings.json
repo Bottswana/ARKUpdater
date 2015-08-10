@@ -1,9 +1,11 @@
 {
     "PostponeUpdateWhenPlayersHigherThan": 10,
-    "UpdateWarningTimeInMinutes": 10,
-    "UpdatePollingInMinutes": 5,
+    "UpdateWarningTimeInMinutes": 2,
+    "UpdatePollingInMinutes": 2,
     "LogLevel": "Debug",
+
     "SteamCMDPath": "C:\\Users\\James\\Desktop\\ARKTest\\SteamPipe",
+    "ShowSteamUpdateInConsole": "true",
 
     "Backup": {
         "EnableBackup": "true",
@@ -21,6 +23,7 @@
     "Servers": [
         {
             "SteamUpdateScript": "C:\\Users\\James\\Desktop\\ARKTest\\Server\\ServerUpdater.cfg",
+            "BackupDirectory": "C:\\Users\\James\\Desktop\\ARKTest\\BackupData",
             "GameServerPath": "C:\\Users\\James\\Desktop\\ARKTest\\Server",
 
             "GameServerName": "BottsTestingServer",
