@@ -1,8 +1,0 @@
-C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\bin\Debug\Components.ConsolePlus.dll
-C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\bin\Debug\Components.ConsolePlus.pdb
-C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\obj\Debug\Components.ConsolePlus.dll
-C:\Users\James\Projects\Harpoon Gaming\Harpoon Admin\Monitoring Engine\Components.ConsolePlus\obj\Debug\Components.ConsolePlus.pdb
-C:\Users\James\Projects\ARKUpdater\ARKUpdater\Components.ConsolePlus\bin\Debug\Components.ConsolePlus.dll
-C:\Users\James\Projects\ARKUpdater\ARKUpdater\Components.ConsolePlus\bin\Debug\Components.ConsolePlus.pdb
-C:\Users\James\Projects\ARKUpdater\ARKUpdater\Components.ConsolePlus\obj\Debug\Components.ConsolePlus.dll
-C:\Users\James\Projects\ARKUpdater\ARKUpdater\Components.ConsolePlus\obj\Debug\Components.ConsolePlus.pdb
