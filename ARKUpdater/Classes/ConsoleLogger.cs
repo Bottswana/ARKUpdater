@@ -45,12 +45,12 @@ namespace ARKUpdater.Classes
 				case LogLevel.Debug: { Prefix = "~Blue~"; break; }
 				case LogLevel.Error: { Prefix = "~Red~"; break; }
 				case LogLevel.Success: { Prefix = "~Green~"; TabCount = 2; break; }
-				case LogLevel.Warning: { Prefix = "~Yellow~"; break; }
+				case LogLevel.Warning: { Prefix = "~Yellow~"; TabCount = 2; break; }
 			}
 
 			string DateString = DateTime.Now.ToString();
 			string ConsoleOutput = ( TabCount == 1 ) ? string.Format("~Gray~[{0}] {3}[{1}]~Gray~:		{2}", DateString, Log, ReturnString, Prefix) : string.Format("~Gray~[{0}] {3}[{1}]~Gray~:	{2}", DateString, Log, ReturnString, Prefix);
-			string FileOutput = string.Format("[{0}] [{1}]:	{2}", DateString, Log, ReturnString); 
+			string FileOutput = ( TabCount == 1 ) ? string.Format("[{0}] [{1}]:		{2}", DateString, Log, ReturnString) : string.Format("[{0}] [{1}]:	{2}", DateString, Log, ReturnString);
 
 			// Write to Console
 			Cli.WriteLine(ConsoleOutput);
