@@ -61,6 +61,8 @@ namespace ARKUpdater.Classes
 		public string LogLevel { get; set; }
 		public string SteamCMDPath { get; set; }
 
+		public bool ShowSteamUpdateInConsole { get; set; }
+
 		public BackupChild Backup { get; set; }
 		public MessageChild Messages { get; set; }
 		public ServerChild[] Servers { get; set; }
@@ -85,12 +87,13 @@ namespace ARKUpdater.Classes
 
 		public class ServerChild
 		{
+			public string ServerAdminPassword { get; set; }
 			public string SteamUpdateScript { get; set; }
+			public string BackupDirectory { get; set; }
 			public string GameServerPath { get; set; }
 			public string GameServerName { get; set; }
-			public string GameServerMap { get; set; }
 			public string ServerPassword { get; set; }
-			public string ServerAdminPassword { get; set; }
+			public string GameServerMap { get; set; }
 
 			public int MaxPlayers { get; set; }
 			public int QueryPort { get; set; }
