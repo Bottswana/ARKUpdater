@@ -10,7 +10,8 @@ namespace ARKUpdater.Classes
 {
 	abstract class ServerInterface
 	{
-		public abstract int StartServer(SettingsLoader.ServerChild ServerData, ConsoleLogger Log);
+		public abstract bool StopServer(SettingsLoader.ServerChild ServerData);
+		public abstract int StartServer(SettingsLoader.ServerChild ServerData);
 	}
 
 	class ServerInterfaceWindows : ServerInterface
@@ -22,31 +23,49 @@ namespace ARKUpdater.Classes
 
 		#region Constructor
 		private Dictionary<Process, SettingsLoader.ServerChild> _ProcessDict;
-		public ServerInterfaceWindows()
+		private ARKUpdater _Parent;
+
+		public ServerInterfaceWindows(ARKUpdater Parent)
 		{
 			this._ProcessDict = new Dictionary<Process, SettingsLoader.ServerChild>();
+			this._Parent = Parent;
 		}
 		#endregion Constructor
 
-		public override int StartServer(SettingsLoader.ServerChild ServerData, ConsoleLogger Log)
+		public override bool StopServer(SettingsLoader.ServerChild ServerData)
+		{
+			Process thisProcess = null;
+			foreach( var tProcess in _ProcessDict )
+			{
+				if( tProcess.Value != ServerData ) continue;
+				thisProcess = tProcess.Key;
+			}
+
+			if( thisProcess == null ) return false;
+			File.Delete(string.Format("{0}\\server.pid", ServerData.GameServerPath));
+
+			thisProcess.CloseMainWindow();
+			return true;
+		}
+
+		public override int StartServer(SettingsLoader.ServerChild ServerData)
 		{
 			// Check for existing process
-			var ProcessID = this._ReadProcessFile(ServerData.GameServerPath);
+			var ProcessID = _ReadProcessFile(ServerData.GameServerPath);
 			if( ProcessID != -1 )
 			{
 				try
 				{
-					using( var Proc = Process.GetProcessById(ProcessID) )
+					var Proc = Process.GetProcessById(ProcessID);
+					if( !Proc.HasExited && (Proc.Id == ProcessID) )
 					{
-						if( !Proc.HasExited && (Proc.Id == ProcessID) )
-						{
-							// Listener for Exit Event
-							this._ProcessDict.Add(Proc, ServerData);
-							Proc.Exited += _ProcessExited;
+						// Listener for Exit Event
+						_ProcessDict.Add(Proc, ServerData);
+						Proc.EnableRaisingEvents = true;
+						Proc.Exited += new EventHandler(_ProcessExited);
 
-							Log.ConsolePrint(LogLevel.Debug, "Re-used existing Server Process with ID {0} (From PID File)", Proc.Id);
-							return Proc.Id;
-						}
+						_Parent.Log.ConsolePrint(LogLevel.Debug, "Re-used existing Server Process with ID {0} (From PID File)", Proc.Id);
+						return Proc.Id;
 					}
 				} catch( System.ArgumentException ) {}
 			}
@@ -83,28 +102,59 @@ namespace ARKUpdater.Classes
 				UseShellExecute = true
 			};
 
-			using(var Proc = Process.Start(ProcessData))
+			try
 			{
 				// Write process to pid file
-				this._WriteProcessFile(ServerData.GameServerPath, Proc.Id);
+				var Proc = Process.Start(ProcessData);
+				_WriteProcessFile(ServerData.GameServerPath, Proc.Id);
 
 				// Listener for Exit Event
-				this._ProcessDict.Add(Proc, ServerData);
-				Proc.Exited += _ProcessExited;
+				_ProcessDict.Add(Proc, ServerData);
+				Proc.EnableRaisingEvents = true;
+				Proc.Exited += new EventHandler(_ProcessExited);
 
 				// Set Window Title
 				System.Threading.Thread.Sleep(2000);
 				SetWindowText(Proc.MainWindowHandle, string.Format("ARK: {0} (Managed by ARKUpdater)", ServerData.GameServerName));
 				
 				// Return with Process ID
-				Log.ConsolePrint(LogLevel.Debug, "Spawned new Server Process with ID {0}", Proc.Id);
+				_Parent.Log.ConsolePrint(LogLevel.Debug, "Spawned new Server Process with ID {0}", Proc.Id);
 				return Proc.Id;
+			}
+			catch( Exception Ex )
+			{
+				_Parent.Log.ConsolePrint(LogLevel.Error, "Unable to spawn new server process: {0}", Ex.Message);
+				return -1;
 			}
 		}
 
 		private void _ProcessExited(object sender, EventArgs e)
 		{
-			Console.WriteLine("Test");
+			Process thisProcess = (Process) sender;
+
+			if( !_ProcessDict.ContainsKey(thisProcess) ) return;
+			foreach( var Server in _Parent.Servers )
+			{
+				if( Server.ServerData != _ProcessDict[thisProcess] ) continue;
+				if( Server.MinutesRemaining != 0 )
+				{
+					// If Minutes Remaining is not 0, we are not expecting the server to send us an exit signal, so this is probably a crash. (or someone exiting the server).
+					// In which case, we will restart the server again.
+					_Parent.Log.ConsolePrint(LogLevel.Warning, "Server '{0}' exited unexpectedly. Restarting server..", Server.ServerData.GameServerName);
+					StartServer(Server.ServerData);
+					break;
+				}
+
+				// We are expecting the server to send us an exit signal, which means we have an update pending for the server (holding the main loop)
+				// Set processid to 0 to signal that the server has exited and we are free to start the update process
+				_Parent.Log.ConsolePrint(LogLevel.Debug, "Server '{0}' completed shutdown, marking as ready for update", Server.ServerData.GameServerName);
+				Server.ProcessID = 0;
+				break;
+			}
+
+			// Clean-up
+			_ProcessDict.Remove(thisProcess);
+			thisProcess.Dispose();
 		}
 
 		private void _WriteProcessFile(string ServerDir, int Pid)
@@ -134,7 +184,12 @@ namespace ARKUpdater.Classes
 
 	class ServerInterfaceUnix : ServerInterface
 	{
-		public override int StartServer(SettingsLoader.ServerChild ServerData, ConsoleLogger Log)
+		public override int StartServer(SettingsLoader.ServerChild ServerData)
+		{
+			throw new NotImplementedException();
+		}
+
+		public override bool StopServer(SettingsLoader.ServerChild ServerData)
 		{
 			throw new NotImplementedException();
 		}

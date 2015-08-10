@@ -1,17 +1,17 @@
-﻿using System;
+﻿using KVLib;
+using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Diagnostics;
 using System.Collections;
-using Newtonsoft.Json;
-using KVLib;
 
 namespace ARKUpdater.Classes
 {
 	abstract class SteamInterface
 	{
 		public abstract bool VerifySteamPath(string ExecutablePath);
-		public abstract bool UpdateGame(string UpdateFile);
+		public abstract void UpdateGame(string UpdateFile, bool ShowOutput);
 
 		public abstract int GetGameInformation(int appid);
 		public abstract int GetGameBuildVersion(string ApplicationPath, ConsoleLogger Log);
@@ -20,26 +20,39 @@ namespace ARKUpdater.Classes
 	class SteamInterfaceWindows : SteamInterface
 	{
 		private string _ExecutablePath;
-		private string _QuerySteamCmd(string CommandString)
+		private string _QuerySteamCmd(string CommandString, bool Return = true)
 		{
 			var ProcessElement = new ProcessStartInfo()
 			{
-				Arguments = string.Format("+login anonymous {0} +quit", CommandString),
 				FileName = string.Format("{0}\\steamcmd.exe", _ExecutablePath),
-				RedirectStandardOutput = true,
+				Arguments = CommandString,
+
+				RedirectStandardOutput = Return,
 				UseShellExecute = false
 			};
 
-			var ReturnStr = new StringBuilder();
-			using( var Proc = Process.Start(ProcessElement) )
+			string ReturnData = null;
+			if( Return )
 			{
-				while( !Proc.StandardOutput.EndOfStream ) 
+				var ReturnStr = new StringBuilder();
+				using( var Proc = Process.Start(ProcessElement) )
 				{
-					ReturnStr.AppendLine( Proc.StandardOutput.ReadLine() );
+					while( !Proc.StandardOutput.EndOfStream ) 
+					{
+						ReturnStr.AppendLine( Proc.StandardOutput.ReadLine() );
+					}
+				}
+
+				ReturnData = ReturnStr.ToString();
+			}
+			else
+			{
+				using( var Proc = Process.Start(ProcessElement) )
+				{
+					Proc.WaitForExit();
 				}
 			}
 
-			string ReturnData = ReturnStr.ToString();
 			return ( (ReturnData != null) && (ReturnData.Length > 1) ) ? ReturnData : null;
 		}
 
@@ -56,7 +69,7 @@ namespace ARKUpdater.Classes
 
 		public override int GetGameInformation(int appid)
 		{
-			string ArgumentString = string.Format("+app_info_update 1 +app_info_print {0}", appid);
+			string ArgumentString = string.Format("+login anonymous +app_info_update 1 +app_info_print {0} +quit", appid);
 			string ReturnData = this._QuerySteamCmd(ArgumentString);
 			if( ReturnData != null )
 			{
@@ -66,38 +79,22 @@ namespace ARKUpdater.Classes
 				string KVData = ReturnData.Substring(FirstPos, (LastPos - FirstPos)+1);
 				var KV = KVLib.KVParser.ParseKeyValueText(KVData);
 
-				// Begin VALve Inception.
-				int PublicBuildID = 0;
-				foreach( var Child in KV.Children )
-				{
-					if( Child.Key != "depots" || !Child.HasChildren ) continue;
-					foreach( var Child2 in Child.Children )
-					{
-						if( Child2.Key != "branches" || !Child2.HasChildren ) continue;
-						foreach( var Child3 in Child2.Children )
-						{
-							if( Child3.Key != "public" || !Child3.HasChildren ) continue;
-							foreach( var Child4 in Child3.Children )
-							{
-								if( Child4.Key == "buildid" )
-								{
-									PublicBuildID = Child4.GetInt();
-									break;
-								}
-							}
-						}
-					}
-				}
+				// Retrieve BuildID using Linq
+				var Child = KV.Children.Where( x => x.Key == "depots" ).First()
+							  .Children.Where( x => x.Key == "branches" ).First()
+							  .Children.Where( x => x.Key == "public" ).First()
+							  .Children.Where( x => x.Key == "buildid" ).First();
 
-				return PublicBuildID;
+				return Child.GetInt();
 			}
 
 			return -1;
 		}
 
-		public override bool UpdateGame(string UpdateFile)
+		public override void UpdateGame(string UpdateFile, bool ShowOutput)
 		{
-			throw new NotImplementedException();
+			string ArgumentString = string.Format("+runscript {0}", UpdateFile);
+			this._QuerySteamCmd(ArgumentString, (ShowOutput) ? false : true);
 		}
 
 		public override int GetGameBuildVersion(string ApplicationPath, ConsoleLogger Log)
@@ -118,15 +115,8 @@ namespace ARKUpdater.Classes
 			}
 
 			var KV = KVLib.KVParser.ParseKeyValueText(KVData);
-			foreach( var Child in KV.Children )
-			{
-				if( Child.Key == "buildid" )
-				{
-					return Child.GetInt();
-				}
-			}
-
-			return -1;
+			KeyValue Child = KV.Children.Where( x => x.Key == "buildid" ).First();
+			return ( Child != null ) ? Child.GetInt() : -1;
 		}
 	}
 
@@ -148,7 +138,7 @@ namespace ARKUpdater.Classes
 			throw new NotImplementedException();
 		}
 
-		public override bool UpdateGame(string UpdateFile)
+		public override void UpdateGame(string UpdateFile, bool ShowOutput)
 		{
 			throw new NotImplementedException();
 		}
