@@ -117,43 +117,43 @@ namespace ARKUpdater.Classes
 		public void SubscribeCallbacks()
 		{
 			this._CManager.Subscribe<SteamUser.LoggedOnCallback>(LogOnCallback);
-            this._CManager.Subscribe<SteamClient.ConnectedCallback>(ConnectedCallback);
+			this._CManager.Subscribe<SteamClient.ConnectedCallback>(ConnectedCallback);
 			this._CManager.Subscribe<SteamClient.DisconnectedCallback>(DisconnectedCallback);
 		}
 		#endregion Thread Setup
 
 		#region Steam3 Callbacks
 		private void ConnectedCallback(SteamClient.ConnectedCallback connected)
-        {
+		{
 			_Parent.Log.ConsolePrint(LogLevel.Debug, "Connected to Steam3, Authenticating as anonymous user");
-            _User.LogOnAnonymous();
-        }
+			_User.LogOnAnonymous();
+		}
 
-        private void DisconnectedCallback(SteamClient.DisconnectedCallback disconnected)
-        {
+		private void DisconnectedCallback(SteamClient.DisconnectedCallback disconnected)
+		{
 			_Parent.Log.ConsolePrint(LogLevel.Debug, "Disconnected from Steam3");
 			_ThreadRunning = false;
-        }
+		}
 
-        private void LogOnCallback(SteamUser.LoggedOnCallback loggedOn)
-        {
-            if( loggedOn.Result != EResult.OK )
-            {
+		private void LogOnCallback(SteamUser.LoggedOnCallback loggedOn)
+		{
+			if( loggedOn.Result != EResult.OK )
+			{
 				_Parent.Log.ConsolePrint(LogLevel.Debug, "Unable to connect to Steam3. {0}", loggedOn.Result);
 				_ThreadRunning = false;
 				Failed = true;
-                return;
-            }
+				return;
+			}
 
 			_Parent.Log.ConsolePrint(LogLevel.Debug, "Logged in anonymously to Steam3");
 			Ready = true;
-        }
+		}
 		#endregion Steam3 Callbacks
 
 		#region Fetch App Information
 		public delegate void AppCallback(SteamApps.PICSProductInfoCallback.PICSProductInfo returnData);
-        public void RequestAppInfo(uint appid, AppCallback callback)
-        {
+		public void RequestAppInfo(uint appid, AppCallback callback)
+		{
 			// Callback for Application Information
 			Action<SteamApps.PICSProductInfoCallback> AppCallback = (appinfo) =>
 			{
@@ -169,8 +169,8 @@ namespace ARKUpdater.Classes
 			};
 
 			// Callback for Token
-            Action<SteamApps.PICSTokensCallback> TokenCallback = (apptoken) =>
-            {
+			Action<SteamApps.PICSTokensCallback> TokenCallback = (apptoken) =>
+			{
 				// Check if our token was returned
 				var ourToken = apptoken.AppTokens.Where( x => x.Key == appid );
 				if( ourToken.Count() != 1 ) return;
@@ -183,11 +183,11 @@ namespace ARKUpdater.Classes
 				};
 
 				_CManager.Subscribe( _Apps.PICSGetProductInfo(new List<SteamApps.PICSRequest>() {Request}, new List<SteamApps.PICSRequest>()), AppCallback);
-            };
+			};
 
 			// Fire Token Callback
 			_CManager.Subscribe(_Apps.PICSGetAccessTokens(new List<uint>() {appid}, new List<uint>()), TokenCallback);
-        }
+		}
 		#endregion Fetch App Information
 	}
 }

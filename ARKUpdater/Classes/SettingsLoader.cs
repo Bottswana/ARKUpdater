@@ -8,9 +8,9 @@ namespace ARKUpdater.Classes
 {
 	class SettingsLoader
 	{
-        #region Static Methods
-        public static SettingsLoader LoadConfiguration(string ConfigurationName, ConsoleLogger Log)
-        {
+		#region Static Methods
+		public static SettingsLoader LoadConfiguration(string ConfigurationName, ConsoleLogger Log)
+		{
 			string json = null;
 			SettingsLoader CastData = null;
 
@@ -36,24 +36,24 @@ namespace ARKUpdater.Classes
 				return null;
 			}
 
-            return CastData;
-        }
+			return CastData;
+		}
 
-        public override string ToString()
-        {
-            StringBuilder sb = new StringBuilder();
-            var fields = this.GetType().GetProperties();
+		public override string ToString()
+		{
+			StringBuilder sb = new StringBuilder();
+			var fields = this.GetType().GetProperties();
 
-            foreach( var propInfo in fields )
-            {
-                sb.AppendFormat("{0} = {1}" + Environment.NewLine, propInfo.Name, propInfo.GetValue(this, null));
-            }
+			foreach( var propInfo in fields )
+			{
+				sb.AppendFormat("{0} = {1}" + Environment.NewLine, propInfo.Name, propInfo.GetValue(this, null));
+			}
 
-            return sb.ToString();
-        }
-        #endregion Static Methods
+			return sb.ToString();
+		}
+		#endregion Static Methods
 
-        #region Configuration Top-Level
+		#region Configuration Top-Level
 		public int PostponeUpdateWhenPlayersHigherThan { get; set; }
 		public int UpdateWarningTimeInMinutes { get; set; }
 		public int UpdatePollingInMinutes { get; set; }
@@ -103,5 +103,5 @@ namespace ARKUpdater.Classes
 			public Dictionary<string, string> ServerParameters { get; set; }
 		}
 		#endregion Child Classes
-    }
+	}
 }
