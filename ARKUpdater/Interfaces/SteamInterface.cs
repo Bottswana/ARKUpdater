@@ -78,7 +78,7 @@ namespace ARKUpdater.Interfaces
 		{
 			using( var Steam3 = SteamKit.SpawnThread(_Parent) )
 			{
-				while( !Steam3.tClass.Ready && !Steam3.tClass.Failed ) continue;
+				while( !Steam3.tClass.Ready && !Steam3.tClass.Failed ) Thread.Sleep(100);
 				var WaitHandle = new AutoResetEvent(false);
 
 				if( Steam3.tClass.Ready )
