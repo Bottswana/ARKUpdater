@@ -75,10 +75,9 @@ namespace ARKUpdater.Interfaces
 
 			// Start new process
 			var QueryString = new StringBuilder();
-			QueryString.Append(string.Format("{0}?listen?MaxPlayers={1}?ServerName={2}?QueryPort={3}?RCONEnabled=true?RCONPort={4}?Port={5}?ServerAdminPassword={6}?ServerPVE={7}",
+			QueryString.Append(string.Format("{0}?listen?MaxPlayers={1}?QueryPort={2}?RCONEnabled=true?RCONPort={3}?Port={4}?ServerAdminPassword={5}?ServerPVE={6}",
 				ServerData.GameServerMap,
 				ServerData.MaxPlayers,
-				ServerData.GameServerName,
 				ServerData.QueryPort,
 				ServerData.RCONPort,
 				ServerData.Port,
@@ -87,6 +86,7 @@ namespace ARKUpdater.Interfaces
 			));
 
 			if( ServerData.ServerPassword.Length > 1 ) QueryString.Append("?ServerPassword="+ServerData.ServerPassword);
+			if( !_Parent.ARKConfiguration.UseServerNameInINIFile ) QueryString.Append("?ServerName="+ServerData.GameServerName);
 			if( ServerData.ServerParameters.Count >= 1 )
 			{
 				foreach( var Param in ServerData.ServerParameters )

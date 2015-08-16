@@ -62,6 +62,7 @@ namespace ARKUpdater.Classes
 		public string SteamCMDPath { get; set; }
 
 		public bool ShowSteamUpdateInConsole { get; set; }
+		public bool UseServerNameInINIFile { get; set; }
 
 		public BackupChild Backup { get; set; }
 		public MessageChild Messages { get; set; }
@@ -72,8 +73,6 @@ namespace ARKUpdater.Classes
 		public class BackupChild
 		{
 			public bool EnableBackup { get; set; }
-			public bool UseCompression { get; set; }
-
 			public int BackupIntervalInMinutes { get; set; }
 			public int NumberOfBackupsToKeepPerServer {  get; set; }
 		}
