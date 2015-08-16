@@ -67,7 +67,7 @@ namespace ARKUpdater.Classes
 					// Wait for data from the server
 					ServerSocket.Receive(buffer);
 				}
-				catch( SocketException )
+				catch( SocketException ) 
 				{
 					throw new QueryException("Timeout occoured waiting for a response from the server");
 				}

@@ -171,13 +171,13 @@ namespace ARKUpdater
 			{
 				this.ServerInt = new ServerInterfaceUnix(this);
 				this.BackupInt = new BackupInterfaceUnix(this);
-				this.SteamInt = new SteamInterfaceUnix();
+				this.SteamInt = new SteamInterfaceUnix(this);
 			}
 			else
 			{
 				this.ServerInt = new ServerInterfaceWindows(this);
 				this.BackupInt = new BackupInterfaceWindows(this);
-				this.SteamInt = new SteamInterfaceWindows();
+				this.SteamInt = new SteamInterfaceWindows(this);
 			}
 
 			// Verify path to SteamCMD
@@ -192,7 +192,7 @@ namespace ARKUpdater
 		{
 			// Get game information
 			Log.ConsolePrint(LogLevel.Info, "Fetching public build number for `ARK: Survival Evolved` from Steam3");
-			int BuildNumber = SteamInt.GetGameInformation(376030, this);
+			int BuildNumber = SteamInt.GetGameInformation(376030);
 			if( BuildNumber == -1 )
 			{
 				Log.ConsolePrint(LogLevel.Error, "Unable to fetch Build ID from Steam, this may be an issue with your internet connection.");
@@ -206,14 +206,22 @@ namespace ARKUpdater
 			foreach( var Server in Servers )
 			{
 				Log.ConsolePrint(LogLevel.Debug, "Init Server '{0}'", Server.ServerData.GameServerName);
-				int CurrentAppID = SteamInt.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
+				int CurrentAppID = SteamInt.GetGameBuildVersion(Server.ServerData.GameServerPath);
 
 				Server.LastBackedUp = Helpers.CurrentUnixStamp;
 				if( (CurrentAppID < BuildNumber) && (CurrentAppID != -1) )
 				{
 					// Update Available
-					Log.ConsolePrint(LogLevel.Info, "Server '{0}' has an update available, Updating before we start the server up.", Server.ServerData.GameServerName);
-					SteamInt.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
+					if( !ServerInt.ServerRunning(Server.ServerData) )
+					{
+						// Update Server
+						Log.ConsolePrint(LogLevel.Info, "Server '{0}' has an update available, Updating before we start the server up.", Server.ServerData.GameServerName);
+						SteamInt.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
+						Log.ConsolePrint(LogLevel.Success, "Server '{0}' update successful, starting server.", Server.ServerData.GameServerName);
+					}
+
+					var ProcessID = ServerInt.StartServer(Server.ServerData);
+					Server.ProcessID = ProcessID;
 				}
 				else
 				{
@@ -236,7 +244,7 @@ namespace ARKUpdater
 				{
 					// Query Steam and check for updates to our servers
 					Log.ConsolePrint(LogLevel.Debug, "Checking with Steam for updates to ARK (Current Build: {0})", BuildNumber);
-					BuildNumber = SteamInt.GetGameInformation(376030, this);
+					BuildNumber = SteamInt.GetGameInformation(376030);
 
 					LastUpdatePollTime = Helpers.CurrentUnixStamp;
 					if( BuildNumber > PreviousBuild ) Log.ConsolePrint(LogLevel.Info, "A new build of `ARK: Survival Evolved` is available. Build number: {0}", BuildNumber);
@@ -245,10 +253,10 @@ namespace ARKUpdater
 				bool MinutePassed = (LastMinutePollTime+60 <= Helpers.CurrentUnixStamp) ? true : false;
 				foreach( var Server in Servers )
 				{
-					if( (PreviousBuild != BuildNumber) && (Server.MinutesRemaining == -1) )
+					if( Server.MinutesRemaining == -1 )
 					{
 						// Check each server for updates
-						var ServerBuild = SteamInt.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
+						var ServerBuild = SteamInt.GetGameBuildVersion(Server.ServerData.GameServerPath);
 						if( (ServerBuild < BuildNumber) && (ServerBuild != -1) )
 						{
 							// Check for Player Requirement
@@ -256,12 +264,15 @@ namespace ARKUpdater
 							{
 								using( var Query = new SrcQuery("127.0.0.1", Server.ServerData.QueryPort) )
 								{
-									var QueryData = Query.QueryServer();
-									if( Convert.ToInt32(QueryData["CurrentPlayers"]) > ARKConfiguration.PostponeUpdateWhenPlayersHigherThan )
+									try
 									{
-										Log.ConsolePrint(LogLevel.Info, "Available update for server '{0}' postponed. Players online: {1}", Server.ServerData.GameServerName, QueryData["CurrentPlayers"]);
-										continue;
-									}
+										var QueryData = Query.QueryServer();
+										if( Convert.ToInt32(QueryData["CurrentPlayers"]) > ARKConfiguration.PostponeUpdateWhenPlayersHigherThan )
+										{
+											Log.ConsolePrint(LogLevel.Info, "Available update for server '{0}' postponed. Players online: {1}", Server.ServerData.GameServerName, QueryData["CurrentPlayers"]);
+											continue;
+										}
+									} catch (QueryException) {}
 								}
 							}
 
@@ -273,10 +284,12 @@ namespace ARKUpdater
 							// Send warning message to Server
 							using( var RCONClient = new ArkRCON("127.0.0.1", Server.ServerData.RCONPort) )
 							{
-								RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
-
-								string RCONWarning = string.Format(ARKConfiguration.Messages.ServerUpdateBroadcast, Server.MinutesRemaining);
-								RCONClient.ExecuteCommand(string.Format("serverchat {0}", RCONWarning));
+								try
+								{
+									RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
+									string RCONWarning = string.Format(ARKConfiguration.Messages.ServerUpdateBroadcast, Server.MinutesRemaining);
+									RCONClient.ExecuteCommand(string.Format("serverchat {0}", RCONWarning));
+								} catch( QueryException ) {}
 							}
 						}
 					}
@@ -291,10 +304,16 @@ namespace ARKUpdater
 						{
 							using( var RCONClient = new ArkRCON("127.0.0.1", Server.ServerData.RCONPort) )
 							{
-								RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
-
-								string RCONWarning = string.Format(ARKConfiguration.Messages.ServerUpdateBroadcast, Server.MinutesRemaining);
-								RCONClient.ExecuteCommand(string.Format("serverchat {0}", RCONWarning));
+								try
+								{
+									RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
+									string RCONWarning = string.Format(ARKConfiguration.Messages.ServerUpdateBroadcast, Server.MinutesRemaining);
+									RCONClient.ExecuteCommand(string.Format("serverchat {0}", RCONWarning));
+								}
+								catch( QueryException Ex )
+								{
+									Log.ConsolePrint(LogLevel.Error, Ex.Message);
+								}
 							}
 						}
 					}
@@ -304,8 +323,15 @@ namespace ARKUpdater
 						// Send warning message to Server
 						using( var RCONClient = new ArkRCON("127.0.0.1", Server.ServerData.RCONPort) )
 						{
-							RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
-							RCONClient.ExecuteCommand(string.Format("serverchat {0}", ARKConfiguration.Messages.ServerShutdownBroadcast));
+							try
+							{
+								RCONClient.Authenticate(Server.ServerData.ServerAdminPassword);
+								RCONClient.ExecuteCommand(string.Format("serverchat {0}", ARKConfiguration.Messages.ServerShutdownBroadcast));
+							}
+							catch( QueryException Ex )
+							{
+								Log.ConsolePrint(LogLevel.Error, Ex.Message);
+							}
 						}
 
 						_Sleeper.WaitOne( TimeSpan.FromSeconds(2) );

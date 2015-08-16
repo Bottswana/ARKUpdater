@@ -8,7 +8,7 @@ using System.Collections.ObjectModel;
 
 namespace ARKUpdater.Classes
 {
-	class ThreadPair
+	class ThreadPair : IDisposable
 	{
 		public Thread tThread;
 		public SteamKit tClass;
@@ -18,9 +18,25 @@ namespace ARKUpdater.Classes
 			tThread = t;
 			tClass = c;
 		}
+
+		#region Disposal
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if( disposing )
+			{
+				tClass.Dispose();
+			}
+		}
+		#endregion Disposal
 	}
 
-	class SteamKit :IDisposable
+	class SteamKit : IDisposable
 	{
 		private SteamUser _User;
 		private SteamApps _Apps;
@@ -43,7 +59,12 @@ namespace ARKUpdater.Classes
 		{
 			if( disposing )
 			{
+				// Stop thread if it is running
+				if( _ThreadRunning ) _ThreadRunning = false;
+				Ready = false;
 
+				// Disconnect from Steam3
+				if( _Client.IsConnected ) _Client.Disconnect();
 			}
 		}
 		#endregion Disposal
@@ -129,6 +150,7 @@ namespace ARKUpdater.Classes
         }
 		#endregion Steam3 Callbacks
 
+		#region Fetch App Information
 		public delegate void AppCallback(SteamApps.PICSProductInfoCallback.PICSProductInfo returnData);
         public void RequestAppInfo(uint appid, AppCallback callback)
         {
@@ -166,6 +188,6 @@ namespace ARKUpdater.Classes
 			// Fire Token Callback
 			_CManager.Subscribe(_Apps.PICSGetAccessTokens(new List<uint>() {appid}, new List<uint>()), TokenCallback);
         }
-
+		#endregion Fetch App Information
 	}
 }

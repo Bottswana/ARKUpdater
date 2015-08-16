@@ -1,10 +1,10 @@
 {
     "PostponeUpdateWhenPlayersHigherThan": 10,
-    "UpdateWarningTimeInMinutes": 10,
+    "UpdateWarningTimeInMinutes": 2,
     "UpdatePollingInMinutes": 5,
     "LogLevel": "Debug",
 
-    "SteamCMDPath": "C:\\Users\\James\\Desktop\\ARKTest\\SteamPipe",
+    "SteamCMDPath": "D:\\ARKTest\\SteamPipe",
     "ShowSteamUpdateInConsole": "true",
 
     "Backup": {
@@ -22,9 +22,9 @@
 
     "Servers": [
         {
-            "SteamUpdateScript": "C:\\Users\\James\\Desktop\\ARKTest\\Server\\ServerUpdater.cfg",
-            "BackupDirectory": "C:\\Users\\James\\Desktop\\ARKTest\\BackupData",
-            "GameServerPath": "C:\\Users\\James\\Desktop\\ARKTest\\Server",
+            "SteamUpdateScript": "D:\\ARKTest\\Server\\ServerUpdater.cfg",
+            "BackupDirectory": "D:\\ARKTest\\BackupData",
+            "GameServerPath": "D:\\ARKTest\\Server",
 
             "GameServerName": "BottsTestingServer",
             "GameServerMap": "TheIsland",

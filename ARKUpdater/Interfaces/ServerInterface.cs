@@ -11,8 +11,17 @@ namespace ARKUpdater.Interfaces
 {
 	abstract class ServerInterface
 	{
+		protected ARKUpdater _Parent;
+		protected Dictionary<Process, SettingsLoader.ServerChild> _ProcessDict;
+		public ServerInterface(ARKUpdater Parent)
+		{
+			this._ProcessDict = new Dictionary<Process, SettingsLoader.ServerChild>();
+			this._Parent = Parent;
+		}
+
 		public abstract bool StopServer(SettingsLoader.ServerChild ServerData);
 		public abstract int StartServer(SettingsLoader.ServerChild ServerData);
+		public abstract bool ServerRunning(SettingsLoader.ServerChild ServerData);
 	}
 
 	class ServerInterfaceWindows : ServerInterface
@@ -22,17 +31,7 @@ namespace ARKUpdater.Interfaces
 		public static extern bool SetWindowText(IntPtr hWnd, string text);
 		#endregion W32API Imports
 
-		#region Constructor
-		private Dictionary<Process, SettingsLoader.ServerChild> _ProcessDict;
-		private ARKUpdater _Parent;
-
-		public ServerInterfaceWindows(ARKUpdater Parent)
-		{
-			this._ProcessDict = new Dictionary<Process, SettingsLoader.ServerChild>();
-			this._Parent = Parent;
-		}
-		#endregion Constructor
-
+		public ServerInterfaceWindows(ARKUpdater parent) : base(parent) {}
 		public override bool StopServer(SettingsLoader.ServerChild ServerData)
 		{
 			Process thisProcess = null;
@@ -129,6 +128,24 @@ namespace ARKUpdater.Interfaces
 			}
 		}
 
+		public override bool ServerRunning(SettingsLoader.ServerChild ServerData)
+		{
+			var ProcessID = _ReadProcessFile(ServerData.GameServerPath);
+			if( ProcessID != -1 )
+			{
+				try
+				{
+					var Proc = Process.GetProcessById(ProcessID);
+					if( !Proc.HasExited && (Proc.Id == ProcessID) )
+					{
+						return true;
+					}
+				} catch( System.ArgumentException ) {}
+			}
+
+			return false;
+		}
+
 		private void _ProcessExited(object sender, EventArgs e)
 		{
 			Process thisProcess = (Process) sender;
@@ -176,7 +193,7 @@ namespace ARKUpdater.Interfaces
 					return Convert.ToInt32( FileName.ReadToEnd() );
 				}
 			}
-			catch( FileNotFoundException )
+			catch( Exception )
 			{
 				return -1;
 			}
@@ -185,23 +202,18 @@ namespace ARKUpdater.Interfaces
 
 	class ServerInterfaceUnix : ServerInterface
 	{
-		#region Constructor
-		private Dictionary<Process, SettingsLoader.ServerChild> _ProcessDict;
-		private ARKUpdater _Parent;
-
-		public ServerInterfaceUnix(ARKUpdater Parent)
-		{
-			this._ProcessDict = new Dictionary<Process, SettingsLoader.ServerChild>();
-			this._Parent = Parent;
-		}
-		#endregion Constructor
-
+		public ServerInterfaceUnix(ARKUpdater parent) : base(parent) {}
 		public override int StartServer(SettingsLoader.ServerChild ServerData)
 		{
 			throw new NotImplementedException();
 		}
 
 		public override bool StopServer(SettingsLoader.ServerChild ServerData)
+		{
+			throw new NotImplementedException();
+		}
+
+		public override bool ServerRunning(SettingsLoader.ServerChild ServerData)
 		{
 			throw new NotImplementedException();
 		}
