@@ -341,7 +341,7 @@ namespace ARKUpdater
 						ServerInt.StopServer(Server.ServerData);
 
 						Log.ConsolePrint(LogLevel.Debug, "Server '{0}' now waiting for process exit", Server.ServerData.GameServerName);
-						while( Server.ProcessID != 0 ) continue; // This is set to 0 by our Exit event on the process in ServerInterface.cs
+						while( Server.ProcessID != 0 ) Thread.Sleep(100); // This is set to 0 by our Exit event on the process in ServerInterface.cs
 
 						// Update Server
 						SteamInt.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
