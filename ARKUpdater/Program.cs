@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using ARKUpdater.Classes;
+using ARKUpdater.Interfaces;
 using System.Collections.Generic;
 
 namespace ARKUpdater
@@ -115,10 +116,12 @@ namespace ARKUpdater
 	class ARKUpdater
 	{
 		public SettingsLoader ARKConfiguration;
-		public ServerInterface Server;
 		public ServerClass[] Servers;
-		public SteamInterface Steam;
 		public ConsoleLogger Log;
+
+		public BackupInterface BackupInt;
+		public ServerInterface ServerInt;
+		public SteamInterface SteamInt;
 
 		private ManualResetEvent _Sleeper;
 		private bool _Running;
@@ -166,17 +169,19 @@ namespace ARKUpdater
 			// Initialise Interfaces
 			if( Helpers.IsUnixPlatform() )
 			{
-				this.Steam = new SteamInterfaceUnix();
-				this.Server = new ServerInterfaceUnix();
+				this.ServerInt = new ServerInterfaceUnix(this);
+				this.BackupInt = new BackupInterfaceUnix(this);
+				this.SteamInt = new SteamInterfaceUnix();
 			}
 			else
 			{
-				this.Steam = new SteamInterfaceWindows();
-				this.Server = new ServerInterfaceWindows(this);
+				this.ServerInt = new ServerInterfaceWindows(this);
+				this.BackupInt = new BackupInterfaceWindows(this);
+				this.SteamInt = new SteamInterfaceWindows();
 			}
 
 			// Verify path to SteamCMD
-			if( !this.Steam.VerifySteamPath(this.ARKConfiguration.SteamCMDPath) )
+			if( !this.SteamInt.VerifySteamPath(this.ARKConfiguration.SteamCMDPath) )
 			{
 				this.Log.ConsolePrint(LogLevel.Error, "Unable to find SteamCMD in provided path, please check the SteamCMD path in settings.json");
 				Helpers.ExitWithError();
@@ -186,11 +191,11 @@ namespace ARKUpdater
 		public void Run()
 		{
 			// Get game information
-			Log.ConsolePrint(LogLevel.Info, "Fetching public build number for `ARK: Survival Evolved` via SteamCMD");
-			int BuildNumber = Steam.GetGameInformation(376030);
+			Log.ConsolePrint(LogLevel.Info, "Fetching public build number for `ARK: Survival Evolved` from Steam3");
+			int BuildNumber = SteamInt.GetGameInformation(376030, this);
 			if( BuildNumber == -1 )
 			{
-				Log.ConsolePrint(LogLevel.Error, "Unable to fetch Build ID from Steam, this may be an issue with your SteamCMD configuration.");
+				Log.ConsolePrint(LogLevel.Error, "Unable to fetch Build ID from Steam, this may be an issue with your internet connection.");
 			}
 			else
 			{
@@ -201,19 +206,20 @@ namespace ARKUpdater
 			foreach( var Server in Servers )
 			{
 				Log.ConsolePrint(LogLevel.Debug, "Init Server '{0}'", Server.ServerData.GameServerName);
-				int CurrentAppID = Steam.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
+				int CurrentAppID = SteamInt.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
 
+				Server.LastBackedUp = Helpers.CurrentUnixStamp;
 				if( (CurrentAppID < BuildNumber) && (CurrentAppID != -1) )
 				{
 					// Update Available
 					Log.ConsolePrint(LogLevel.Info, "Server '{0}' has an update available, Updating before we start the server up.", Server.ServerData.GameServerName);
-					Steam.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
+					SteamInt.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
 				}
 				else
 				{
 					// Start Server
 					Log.ConsolePrint(LogLevel.Info, "Server '{0}' is up to date, Starting server.", Server.ServerData.GameServerName);
-					var ProcessID = this.Server.StartServer(Server.ServerData);
+					var ProcessID = ServerInt.StartServer(Server.ServerData);
 					Server.ProcessID = ProcessID;
 				}
 			}
@@ -230,7 +236,7 @@ namespace ARKUpdater
 				{
 					// Query Steam and check for updates to our servers
 					Log.ConsolePrint(LogLevel.Debug, "Checking with Steam for updates to ARK (Current Build: {0})", BuildNumber);
-					BuildNumber = this.Steam.GetGameInformation(376030);
+					BuildNumber = SteamInt.GetGameInformation(376030, this);
 
 					LastUpdatePollTime = Helpers.CurrentUnixStamp;
 					if( BuildNumber > PreviousBuild ) Log.ConsolePrint(LogLevel.Info, "A new build of `ARK: Survival Evolved` is available. Build number: {0}", BuildNumber);
@@ -242,7 +248,7 @@ namespace ARKUpdater
 					if( (PreviousBuild != BuildNumber) && (Server.MinutesRemaining == -1) )
 					{
 						// Check each server for updates
-						var ServerBuild = Steam.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
+						var ServerBuild = SteamInt.GetGameBuildVersion(Server.ServerData.GameServerPath, Log);
 						if( (ServerBuild < BuildNumber) && (ServerBuild != -1) )
 						{
 							// Check for Player Requirement
@@ -306,36 +312,41 @@ namespace ARKUpdater
 
 						// Shutdown Server
 						Log.ConsolePrint(LogLevel.Info, "Server '{0}' will now be shutdown for an update", Server.ServerData.GameServerName);
-						this.Server.StopServer(Server.ServerData);
+						ServerInt.StopServer(Server.ServerData);
 
 						Log.ConsolePrint(LogLevel.Debug, "Server '{0}' now waiting for process exit", Server.ServerData.GameServerName);
 						while( Server.ProcessID != 0 ) continue; // This is set to 0 by our Exit event on the process in ServerInterface.cs
 
 						// Update Server
-						Steam.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
+						SteamInt.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
 						_Sleeper.WaitOne( TimeSpan.FromSeconds(2) );
 
 						// Restart Server
 						Log.ConsolePrint(LogLevel.Info, "Server '{0}' update complete, restarting server.", Server.ServerData.GameServerName);
-						var ProcessID = this.Server.StartServer(Server.ServerData);
+						var ProcessID = ServerInt.StartServer(Server.ServerData);
 
 						Server.MinutesRemaining = -1;
 						Server.ProcessID = ProcessID;
 					}
+
+					if( ARKConfiguration.Backup.EnableBackup )
+					{
+						// Check for Last Backup
+						if( (Server.LastBackedUp + (60 * ARKConfiguration.Backup.BackupIntervalInMinutes) < Helpers.CurrentUnixStamp) && !UpdatesQueued )
+						{
+							Server.LastBackedUp = Helpers.CurrentUnixStamp;
+							BackupInt.BackupServer(Server.ServerData);
+							BackupInt.CleanBackups(Server.ServerData);
+						}
+					}
 				}
 
-				if( this.ARKConfiguration.Backup.EnableBackup )
-				{
-					// Check for Last Backup
-				}
-
-				PreviousBuild = BuildNumber;
-				if( MinutePassed ) LastMinutePollTime = Helpers.CurrentUnixStamp;
-
+				// Cleanup before next loop
 				int NumberServersUpdateRemaining = Servers.Where(x => x.MinutesRemaining != -1).Count();
 				if( NumberServersUpdateRemaining <= 0 && UpdatesQueued ) UpdatesQueued = false;
 
-				// ZzzzzZZZzzzZZZ
+				PreviousBuild = BuildNumber;
+				if( MinutePassed ) LastMinutePollTime = Helpers.CurrentUnixStamp;
 				_Sleeper.WaitOne( TimeSpan.FromSeconds(5) );
 			}
 		}

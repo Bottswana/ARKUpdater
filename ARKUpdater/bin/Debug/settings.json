@@ -1,7 +1,7 @@
 {
     "PostponeUpdateWhenPlayersHigherThan": 10,
-    "UpdateWarningTimeInMinutes": 2,
-    "UpdatePollingInMinutes": 2,
+    "UpdateWarningTimeInMinutes": 10,
+    "UpdatePollingInMinutes": 5,
     "LogLevel": "Debug",
 
     "SteamCMDPath": "C:\\Users\\James\\Desktop\\ARKTest\\SteamPipe",
@@ -10,7 +10,7 @@
     "Backup": {
         "EnableBackup": "true",
         "UseCompression": "true",
-        "BackupIntervalInMinutes": 30,
+        "BackupIntervalInMinutes": 2,
         "NumberOfBackupsToKeepPerServer": 10
     },
 

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using ARKUpdater.Classes;
 using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices; 
 
-namespace ARKUpdater.Classes
+namespace ARKUpdater.Interfaces
 {
 	abstract class ServerInterface
 	{
@@ -184,6 +185,17 @@ namespace ARKUpdater.Classes
 
 	class ServerInterfaceUnix : ServerInterface
 	{
+		#region Constructor
+		private Dictionary<Process, SettingsLoader.ServerChild> _ProcessDict;
+		private ARKUpdater _Parent;
+
+		public ServerInterfaceUnix(ARKUpdater Parent)
+		{
+			this._ProcessDict = new Dictionary<Process, SettingsLoader.ServerChild>();
+			this._Parent = Parent;
+		}
+		#endregion Constructor
+
 		public override int StartServer(SettingsLoader.ServerChild ServerData)
 		{
 			throw new NotImplementedException();
