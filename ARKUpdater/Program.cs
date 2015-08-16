@@ -226,7 +226,7 @@ namespace ARKUpdater
 				else
 				{
 					// Start Server
-					Log.ConsolePrint(LogLevel.Info, "Server '{0}' is up to date, Starting server.", Server.ServerData.GameServerName);
+					Log.ConsolePrint(LogLevel.Info, "Server '{0}' is up to date. Starting/Connecting to server", Server.ServerData.GameServerName);
 					var ProcessID = ServerInt.StartServer(Server.ServerData);
 					Server.ProcessID = ProcessID;
 				}
