@@ -1,15 +1,17 @@
 {
     "PostponeUpdateWhenPlayersHigherThan": 10,
-    "UpdateWarningTimeInMinutes": 10,
+    "UpdateWarningTimeInMinutes": 2,
     "UpdatePollingInMinutes": 5,
-    "LogFile": "console.log",
-    "LogLevel": "Debug",
-    "SteamCMDPath": "",
+    "LogLevel": "Info",
+
+    "SteamCMDPath": "C:\\Path\\To\\SteamCMD",
+    "ShowSteamUpdateInConsole": "true",
+    "UseServerNameInINIFile": "false",
 
     "Backup": {
         "EnableBackup": "true",
-        "UseCompression": "true",
-        "BackupIntevalInMinutes": 30
+        "BackupIntervalInMinutes": 30,
+        "NumberOfBackupsToKeepPerServer": 5
     },
 
     "Messages": {
@@ -20,8 +22,9 @@
 
     "Servers": [
         {
-            "SteamUpdateScript": "",
-            "GameServerPath": "",
+            "SteamUpdateScript": "C:\\Path\\To\\Server1\\ServerUpdater.cfg",
+            "BackupDirectory": "C:\\Path\\To\\Server1\\Backup",
+            "GameServerPath": "C:\\Path\\To\\Server1",
 
             "GameServerName": "Server1",
             "GameServerMap": "TheIsland",
@@ -30,8 +33,8 @@
             "RCONPort": 27016,
             "Port": 7777,
 
-            "ServerPassword": "",
-            "ServerAdminPassword": "",
+            "ServerPassword": "Password123",
+            "ServerAdminPassword": "Password123",
             "ServerPVE": "false",
 
             "ServerParameters": { 
@@ -39,8 +42,9 @@
             }
         },
         {
-            "SteamUpdateScript": "",
-            "GameServerPath": "",
+            "SteamUpdateScript": "C:\\Path\\To\\Server2\\ServerUpdater.cfg",
+            "BackupDirectory": "C:\\Path\\To\\Server2\\Backup",
+            "GameServerPath": "C:\\Path\\To\\Server2",
 
             "GameServerName": "Server2",
             "GameServerMap": "TheIsland",
@@ -49,8 +53,8 @@
             "RCONPort": 27026,
             "Port": 7787,
 
-            "ServerPassword": "",
-            "ServerAdminPassword": "",
+            "ServerPassword": "Password123",
+            "ServerAdminPassword": "Password123",
             "ServerPVE": "false",
 
             "ServerParameters": { 
