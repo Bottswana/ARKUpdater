@@ -1,7 +1,9 @@
-/ARKUpdater/bin/Debug
-/ARKUpdater/bin/Release
-/ARKUpdater/obj
-/Components.ConsolePlus/bin
-/Components.ConsolePlus/obj
-/packages
-/*.suo
+[Oo]bj
+[Rr]elease
+[Dd]ebug
+packages
+*.suo
+*.user
+*.dll
+*.exe
+*.log
