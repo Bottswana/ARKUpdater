@@ -27,8 +27,11 @@ namespace ARKUpdater.Interfaces
 	class ServerInterfaceWindows : ServerInterface
 	{
 		#region W32API Imports
-		[DllImport("user32.dll")]
-		public static extern bool SetWindowText(IntPtr hWnd, string text);
+		static class NativeMethods
+		{
+			[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+			public static extern bool SetWindowText(IntPtr hWnd, string text);
+		}
 		#endregion W32API Imports
 
 		public ServerInterfaceWindows(ARKUpdater parent) : base(parent) {}
@@ -115,7 +118,7 @@ namespace ARKUpdater.Interfaces
 
 				// Set Window Title
 				System.Threading.Thread.Sleep(2000);
-				SetWindowText(Proc.MainWindowHandle, string.Format("ARK: {0} (Managed by ARKUpdater)", ServerData.GameServerName));
+				NativeMethods.SetWindowText(Proc.MainWindowHandle, string.Format("ARK: {0} (Managed by ARKUpdater)", ServerData.GameServerName));
 				
 				// Return with Process ID
 				_Parent.Log.ConsolePrint(LogLevel.Debug, "Spawned new Server Process with ID {0}", Proc.Id);
@@ -180,7 +183,6 @@ namespace ARKUpdater.Interfaces
 			using( var FileName = new StreamWriter(string.Format("{0}\\server.pid", ServerDir), false) )
 			{
 				FileName.Write(Pid);
-				FileName.Close();
 			}
 		}
 

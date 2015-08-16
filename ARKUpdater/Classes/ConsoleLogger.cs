@@ -15,7 +15,7 @@ namespace ARKUpdater.Classes
 		Error		= 4
 	};
 
-	class ConsoleLogger
+	class ConsoleLogger : IDisposable
 	{
 		private StreamWriter _fileHandle;
 		private LogLevel _Log;
@@ -27,6 +27,21 @@ namespace ARKUpdater.Classes
 			this._fileHandle.AutoFlush = true;
 			this._fileHandle.WriteLine("");
 			this._Log = Log;
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if( disposing )
+			{
+				this._fileHandle.Close();
+				this._fileHandle.Dispose();
+			}
 		}
 
 		public void ConsolePrint(LogLevel Log, string Message, params object[] list)
