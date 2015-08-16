@@ -64,9 +64,10 @@ namespace ARKUpdater
 		{
 			System.Reflection.Assembly execAssembly = System.Reflection.Assembly.GetCallingAssembly();
 			System.Reflection.AssemblyName name = execAssembly.GetName();
-			return string.Format("{0:0}.{1:0} (.NET {2})",
+			return string.Format("{0:0}.{1:0}.{2:0} (.NET {3})",
 				name.Version.Major.ToString(),
 				name.Version.Minor.ToString(),
+				name.Version.Build.ToString(),
 				execAssembly.ImageRuntimeVersion
 			);
 		}
