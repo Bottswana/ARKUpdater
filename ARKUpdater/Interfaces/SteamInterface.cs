@@ -97,6 +97,7 @@ namespace ARKUpdater.Interfaces
 							KeyValue buildid = node["buildid"];
 							if( buildid != KeyValue.Invalid )
 							{
+								_Parent.Log.ConsolePrint(LogLevel.Debug, "Retrieved Buildid from Steam3: {0}", buildid.Value);
 								returndata = Convert.ToInt32(buildid.Value);
 							}
 						}

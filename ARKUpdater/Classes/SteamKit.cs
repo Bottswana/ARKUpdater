@@ -64,6 +64,7 @@ namespace ARKUpdater.Classes
 				Ready = false;
 
 				// Disconnect from Steam3
+				_User.LogOff();
 				if( _Client.IsConnected ) _Client.Disconnect();
 			}
 		}
