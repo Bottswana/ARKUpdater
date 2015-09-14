@@ -43,6 +43,7 @@ namespace ARKUpdater.Classes
 		private ARKUpdater _Parent;
 		private SteamClient _Client;
 		private CallbackManager _CManager;
+		private AutoResetEvent _ResetEvent;
 
 		public bool Ready;
 		public bool Failed;
@@ -71,9 +72,9 @@ namespace ARKUpdater.Classes
 		#endregion Disposal
 
 		#region Create Thread
-		public static ThreadPair SpawnThread(ARKUpdater p)
+		public static ThreadPair SpawnThread(ARKUpdater p, AutoResetEvent r)
 		{
-			var thisThread = new SteamKit(p);
+			var thisThread = new SteamKit(p, r);
 			Thread tThread = new Thread( () => thisThread.RunThread() )
 			{
 				IsBackground = true
@@ -85,9 +86,11 @@ namespace ARKUpdater.Classes
 		#endregion Create Thread
 
 		#region Thread Setup
-		public SteamKit(ARKUpdater p)
+		public SteamKit(ARKUpdater p, AutoResetEvent r)
 		{
 			this._Parent = p;
+			this._ResetEvent = r;
+
 			this.Ready = false;
 			this.Failed = false;
 			this._ThreadRunning = true;
@@ -133,6 +136,7 @@ namespace ARKUpdater.Classes
 		private void DisconnectedCallback(SteamClient.DisconnectedCallback disconnected)
 		{
 			_Parent.Log.ConsolePrint(LogLevel.Debug, "Disconnected from Steam3");
+			_ResetEvent.Set();
 			_ThreadRunning = false;
 		}
 
@@ -147,6 +151,7 @@ namespace ARKUpdater.Classes
 			}
 
 			_Parent.Log.ConsolePrint(LogLevel.Debug, "Logged in anonymously to Steam3");
+			_ResetEvent.Set();
 			Ready = true;
 		}
 		#endregion Steam3 Callbacks

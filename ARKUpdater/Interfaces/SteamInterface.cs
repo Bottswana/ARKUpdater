@@ -76,12 +76,15 @@ namespace ARKUpdater.Interfaces
 		
 		public override int GetGameInformation(uint appid)
 		{
-			using( var Steam3 = SteamKit.SpawnThread(_Parent) )
+			var WaitHandle = new AutoResetEvent(false);
+			using( var Steam3 = SteamKit.SpawnThread(_Parent, WaitHandle) )
 			{
-				while( !Steam3.tClass.Ready && !Steam3.tClass.Failed ) Thread.Sleep(100);
-				var WaitHandle = new AutoResetEvent(false);
+				// Wait for Steam3 to be ready
+				WaitHandle.WaitOne();
+				WaitHandle.Reset();
 
-				if( Steam3.tClass.Ready )
+				// Prepare request to Steam3
+				if( Steam3.tClass.Ready && !Steam3.tClass.Failed )
 				{
 					var returndata = -1;
 					Steam3.tClass.RequestAppInfo(appid, (x) => {

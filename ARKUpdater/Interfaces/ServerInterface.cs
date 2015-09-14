@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using ARKUpdater.Classes;
 using System.Diagnostics;
 using System.Collections;
@@ -19,9 +20,9 @@ namespace ARKUpdater.Interfaces
 			this._Parent = Parent;
 		}
 
-		public abstract bool StopServer(SettingsLoader.ServerChild ServerData);
 		public abstract int StartServer(SettingsLoader.ServerChild ServerData);
 		public abstract bool ServerRunning(SettingsLoader.ServerChild ServerData);
+		public abstract bool StopServer(SettingsLoader.ServerChild ServerData, AutoResetEvent ResetEvent);
 	}
 
 	class ServerInterfaceWindows : ServerInterface
@@ -35,7 +36,7 @@ namespace ARKUpdater.Interfaces
 		#endregion W32API Imports
 
 		public ServerInterfaceWindows(ARKUpdater parent) : base(parent) {}
-		public override bool StopServer(SettingsLoader.ServerChild ServerData)
+		public override bool StopServer(SettingsLoader.ServerChild ServerData, AutoResetEvent ResetEvent)
 		{
 			Process thisProcess = null;
 			foreach( var tProcess in _ProcessDict )
@@ -45,8 +46,11 @@ namespace ARKUpdater.Interfaces
 			}
 
 			if( thisProcess == null ) return false;
-			File.Delete(string.Format("{0}\\server.pid", ServerData.GameServerPath));
+			thisProcess.Exited += new EventHandler( (object sender, EventArgs e) => {
+				ResetEvent.Set();
+			});
 
+			File.Delete(string.Format("{0}\\server.pid", ServerData.GameServerPath));
 			thisProcess.CloseMainWindow();
 			return true;
 		}
@@ -117,8 +121,8 @@ namespace ARKUpdater.Interfaces
 				Proc.Exited += new EventHandler(_ProcessExited);
 
 				// Set Window Title
-				System.Threading.Thread.Sleep(2000);
-				NativeMethods.SetWindowText(Proc.MainWindowHandle, string.Format("ARK: {0} (Managed by ARKUpdater)", ServerData.GameServerName));
+				//System.Threading.Thread.Sleep(2000);
+				//NativeMethods.SetWindowText(Proc.MainWindowHandle, string.Format("ARK: {0} (Managed by ARKUpdater)", ServerData.GameServerName));
 				
 				// Return with Process ID
 				_Parent.Log.ConsolePrint(LogLevel.Debug, "Spawned new Server Process with ID {0}", Proc.Id);
@@ -167,7 +171,6 @@ namespace ARKUpdater.Interfaces
 				}
 
 				// We are expecting the server to send us an exit signal, which means we have an update pending for the server (holding the main loop)
-				// Set processid to 0 to signal that the server has exited and we are free to start the update process
 				_Parent.Log.ConsolePrint(LogLevel.Debug, "Server '{0}' completed shutdown, marking as ready for update", Server.ServerData.GameServerName);
 				Server.ProcessID = 0;
 				break;
@@ -210,7 +213,7 @@ namespace ARKUpdater.Interfaces
 			throw new NotImplementedException();
 		}
 
-		public override bool StopServer(SettingsLoader.ServerChild ServerData)
+		public override bool StopServer(SettingsLoader.ServerChild ServerData, AutoResetEvent ResetEvent)
 		{
 			throw new NotImplementedException();
 		}
