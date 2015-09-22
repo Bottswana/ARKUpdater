@@ -247,11 +247,14 @@ namespace ARKUpdater
 					Log.ConsolePrint(LogLevel.Debug, "Checking with Steam for updates to ARK (Current Build: {0})", BuildNumber);
 					BuildNumber = SteamInt.GetGameInformation(376030);
 
-					LastUpdatePollTime = Helpers.CurrentUnixStamp;
-					if( BuildNumber > PreviousBuild ) Log.ConsolePrint(LogLevel.Info, "A new build of `ARK: Survival Evolved` is available. Build number: {0}", BuildNumber);
+					if( BuildNumber != -1 )
+					{
+						LastUpdatePollTime = Helpers.CurrentUnixStamp;
+						if( BuildNumber > PreviousBuild ) Log.ConsolePrint(LogLevel.Info, "A new build of `ARK: Survival Evolved` is available. Build number: {0}", BuildNumber);
+					}
 				}
 
-				bool MinutePassed = (LastMinutePollTime+60 <= Helpers.CurrentUnixStamp) ? true : false;
+				bool MinutePassed = ( LastMinutePollTime + 60 <= Helpers.CurrentUnixStamp ) ? true : false;
 				foreach( var Server in Servers )
 				{
 					if( Server.MinutesRemaining == -1 )
@@ -338,11 +341,12 @@ namespace ARKUpdater
 						_Sleeper.WaitOne( TimeSpan.FromSeconds(2) );
 
 						// Shutdown Server
+						var ResetEvent = new AutoResetEvent(false);
+						ServerInt.StopServer(Server.ServerData, ResetEvent);
 						Log.ConsolePrint(LogLevel.Info, "Server '{0}' will now be shutdown for an update", Server.ServerData.GameServerName);
-						ServerInt.StopServer(Server.ServerData);
-
+						
+						ResetEvent.WaitOne();
 						Log.ConsolePrint(LogLevel.Debug, "Server '{0}' now waiting for process exit", Server.ServerData.GameServerName);
-						while( Server.ProcessID != 0 ) Thread.Sleep(100); // This is set to 0 by our Exit event on the process in ServerInterface.cs
 
 						// Update Server
 						SteamInt.UpdateGame(Server.ServerData.SteamUpdateScript, ARKConfiguration.ShowSteamUpdateInConsole);
