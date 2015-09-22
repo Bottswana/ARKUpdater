@@ -144,9 +144,11 @@ namespace ARKUpdater.Classes
 		{
 			if( loggedOn.Result != EResult.OK )
 			{
-				_Parent.Log.ConsolePrint(LogLevel.Debug, "Unable to connect to Steam3. {0}", loggedOn.Result);
+				_Parent.Log.ConsolePrint(LogLevel.Error, "Unable to connect to Steam3. Error: {0}", loggedOn.Result);
 				_ThreadRunning = false;
+
 				Failed = true;
+				_ResetEvent.Set();
 				return;
 			}
 
