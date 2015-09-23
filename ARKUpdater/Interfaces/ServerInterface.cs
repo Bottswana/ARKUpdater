@@ -5,6 +5,7 @@ using System.Threading;
 using ARKUpdater.Classes;
 using System.Diagnostics;
 using System.Collections;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Runtime.InteropServices; 
 
@@ -27,13 +28,19 @@ namespace ARKUpdater.Interfaces
 
 	class ServerInterfaceWindows : ServerInterface
 	{
-		#region W32API Imports
+		#region Window Text Code
 		static class NativeMethods
 		{
 			[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 			public static extern bool SetWindowText(IntPtr hWnd, string text);
 		}
-		#endregion W32API Imports
+
+		private async Task _UpdateWindow(Process Proc, string Text)
+		{
+			await Task.Delay(5000);
+			NativeMethods.SetWindowText(Proc.MainWindowHandle, Text);
+		}
+		#endregion Window Text Code
 
 		public ServerInterfaceWindows(ARKUpdater parent) : base(parent) {}
 		public override bool StopServer(SettingsLoader.ServerChild ServerData, AutoResetEvent ResetEvent)
@@ -117,13 +124,13 @@ namespace ARKUpdater.Interfaces
 
 				// Listener for Exit Event
 				_ProcessDict.Add(Proc, ServerData);
+
 				Proc.EnableRaisingEvents = true;
 				Proc.Exited += new EventHandler(_ProcessExited);
 
 				// Set Window Title
-				//System.Threading.Thread.Sleep(2000);
-				//NativeMethods.SetWindowText(Proc.MainWindowHandle, string.Format("ARK: {0} (Managed by ARKUpdater)", ServerData.GameServerName));
-				
+				Task tResult = this._UpdateWindow(Proc, string.Format("ARK: {0} (Managed by ARKUpdater)", ServerData.GameServerName));
+
 				// Return with Process ID
 				_Parent.Log.ConsolePrint(LogLevel.Debug, "Spawned new Server Process with ID {0}", Proc.Id);
 				return Proc.Id;

@@ -249,7 +249,7 @@ namespace ARKUpdater
 					if( BuildNumber != -1 )
 					{
 						LastUpdatePollTime = Helpers.CurrentUnixStamp;
-						if( BuildNumber > PreviousBuild ) Log.ConsolePrint(LogLevel.Info, "A new build of `ARK: Survival Evolved` is available. Build number: {0}", BuildNumber);
+						if( ( BuildNumber > PreviousBuild ) && ( PreviousBuild != -1 ) ) Log.ConsolePrint(LogLevel.Info, "A new build of `ARK: Survival Evolved` is available. Build number: {0}", BuildNumber);
 					}
 				}
 
